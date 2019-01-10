@@ -1,6 +1,7 @@
-#include <stdlib>
+#include <cstdlib>
 #include <bitset>
-#include <to_ulong>
+#include <cstring>
+#include <string>
 
 using namespace std;
 
@@ -10,7 +11,7 @@ string interm_1000(string psswd, string salt, string intermsum); // extends to i
 bitset<128> str_to_bin(string tmp); // for the final printing
 string md5_crypthash(string passwd, string salt, string magic, string finalsum);
 
-int main() {
+int main(int argc, char** argv) {
     // compute alternate sum
     // compute intermediate sum
     // remaining calculations to extend intermsum to interm_1000
@@ -20,7 +21,7 @@ int main() {
 
 // compute alternate sum
 string compute_altsum(string salt, string passwd) {
-    return altsum; // replace altsum with md5(psswd + salt + psswd); TODO: look into the library Alex sent and get rid of the overhead of this function
+    return "altsum"; // replace altsum with md5(psswd + salt + psswd); TODO: look into the library Alex sent and get rid of the overhead of this function
 }
 
 
@@ -37,7 +38,7 @@ string compute_intermsum(string psswd, string magic, string salt, string altsum)
     
     // }
 
-    return intermsum;
+    return "intermsum";
 }
 
 
@@ -65,15 +66,21 @@ string interm_1000(string psswd, string salt, string intermsum) {
         else { // if i is odd, intermsum_i
             working_final.append(tmp_intermsum);
         }
-        tmp_intermsum = md5(working_final);
+        //tmp_intermsum = md5(working_final);
     }
     return tmp_intermsum; // actually the final thing
 }
 
-// HEREEEEEEEEEE
+// TODO: should template this so we can do both 6 bits and 2 bits
+string gimme_char(bitset<6> bit_grp) { // 22 groups total
+    int to_int = static_cast<int>(bit_grp.to_ulong());
+    string crypt_str = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    return crypt_str.substr(to_int, 1);
+}
+
 string md5_crypthash(string psswd, string salt, string magic, string finalsum) {
     // output magic, then salt, then '$' to separate salt from encrypted section
-    string tmp = magic.append(salt).append('$');
+    string tmp = magic.append(salt).append("$");
     // then convert string to binary
     bitset<128> much_binary (finalsum.c_str());
     // reordering shenanigans (11 4 10 5 3 9 15 2 8 14 1 7 13 0 6 12)
@@ -81,29 +88,29 @@ string md5_crypthash(string psswd, string salt, string magic, string finalsum) {
     bitset<128> new_WORLD_order; 
     for (unsigned i = 0; i < 16; ++i) { // find the bytes of totally not arbitrary order in the not arbitrary order
         // reorder stoof
-        ith_start = byte_seq[i] * 8;
-        ith_end = ith_start + 7;
-        jth_start = i * 8;
-        jth_end = jth_start + 7; // index of bits
+        unsigned ith_start = byte_seq[i] * 8;
+        unsigned ith_end = ith_start + 7;
+        unsigned jth_start = i * 8;
+        unsigned jth_end = jth_start + 7; // index of bits
         // identifying the bits in the byte in question
         for (unsigned j = jth_start; j <= jth_end; ++j) {
             new_WORLD_order[j] = much_binary[j];
         }
     }
     // partition into groups of 6 bits (22 groups total)
-    //beginning with the least significant
+    //beginning with the least significant (rightmost)
     //NOTE: the link says no additional padding, but we're electing to ignore that
     string partitioned_stuff;
     for (unsigned i = 127; i >= 0; i = i - 6) {
         if (i > 128) { // to catch the BIG number :^)
-            break;
+            break; // TODO still need to convert the two most significant bits
         }
         bitset<6> tmp_bits;
-        for (unsigned j = 6; j >= 6; ++j) {
-            if (j > 7) { // another BIG one :^')
+        for (unsigned j = 5; j >= 0; --j) {
+            if (j > 5) { // another BIG one :^')
                 break;
             }
-            tmp[6 - j] = new_WORLD_order[i - j];
+            tmp[5 - j] = new_WORLD_order[i - j];
         }
         // convert to char base64
         partitioned_stuff = partitioned_stuff.append(gimme_char(tmp_bits));
@@ -111,14 +118,5 @@ string md5_crypthash(string psswd, string salt, string magic, string finalsum) {
     // output corresponding base64 character with said grop of 6 bits
     
     return tmp.append(partitioned_stuff);
-}
-
-
-string gimme_char(bitset<6> bit_grp) { // 22 groups total
-    int to_int = static_cast<int>(bit_grp.to_ulong());
-    string crypt_str = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    char crypt_arr[crypt_str.size()+1];
-    strcpy(crypt_arr, crypt_str.c_str());
-    return crypt_arr[to_int]; // NOTE / TODO: check type later; currently a str of length 1
 }
 
