@@ -1,7 +1,9 @@
+#include <openssl/md5.h>
 #include <cstdlib>
 #include <bitset>
 #include <cstring>
 #include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -10,14 +12,25 @@ string compute_intermsum(string psswd, string magic, string salt, string altsum)
 string interm_1000(string psswd, string salt, string intermsum); // extends to intermsum to intermediate_1000 sum
 bitset<128> str_to_bin(string tmp); // for the final printing
 string md5_crypthash(string passwd, string salt, string magic, string finalsum);
+string compute_primitive_md5(string input); //return the "primitive" md5 hash of a string
 
 int main(int argc, char** argv) {
     // compute alternate sum
     // compute intermediate sum
     // remaining calculations to extend intermsum to interm_1000
+    // rearrange/hash the bytes of the interm_1000
     return 0;
 }
 
+
+string compute_primitive_md5(string input) {
+    unsigned char digest[16];
+    char* to_hash = new char(input.length());
+    strcpy(to_hash, input.c_str());
+    
+    MD5((unsigned char*)(to_hash), strlen(to_hash), (unsigned char*)(digest));
+    return string((char*)&digest, 16);
+}
 
 // compute alternate sum
 string compute_altsum(string salt, string passwd) {
