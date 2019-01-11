@@ -24,17 +24,17 @@ int main(int argc, char** argv) {
 
 
 string compute_primitive_md5(string input) {
-    unsigned char digest[16];
-    char* to_hash = new char(input.length());
-    strcpy(to_hash, input.c_str());
+    unsigned char digest[16];   //allocate 16 bytes for result, or "digest"
+    char* to_hash = new char(input.length());   //allocate space for input 
+    strcpy(to_hash, input.c_str());   //copy input into to_hash
     
-    MD5((unsigned char*)(to_hash), strlen(to_hash), (unsigned char*)(digest));
-    return string((char*)&digest, 16);
+    MD5((unsigned char*)(to_hash), strlen(to_hash), (unsigned char*)(digest));    //compute the md5
+    return string((char*)&digest, 16);    // convert into a string
 }
 
 // compute alternate sum
 string compute_altsum(string salt, string passwd) {
-    return "altsum"; // replace altsum with md5(psswd + salt + psswd); TODO: look into the library Alex sent and get rid of the overhead of this function
+    return compute_primitive_md5(passwd.append(salt).append(passwd)); // maybe just not make this a function?
 }
 
 
