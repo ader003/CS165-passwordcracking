@@ -7,129 +7,168 @@
 
 using namespace std;
 
-string compute_altsum(string salt, string passwd); // needed to compute intermediate_0 sum
-string compute_intermsum(string psswd, string magic, string salt, string altsum); // intermediate_0 sum
-string interm_1000(string psswd, string salt, string intermsum); // extends to intermsum to intermediate_1000 sum
-bitset<128> str_to_bin(string tmp); // for the final printing
-string md5_crypthash(string passwd, string salt, string magic, string finalsum);
-string compute_primitive_md5(string input); //return the "primitive" md5 hash of a string
+void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
+void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* intermsum, unsigned i_len, char* interm1000_sum_prealloc); // extends to intermsum to intermediate_1000 sum
+void rearrange(char* finalsum, unsigned sum_len, char* partitioned_stuff);
+void compute_primitive_md5(char* input, unsigned in_len, char* altsum_prealloc); //return the "primitive" md5 hash of a string
 
 int main(int argc, char** argv) {
+    char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
+    char salt[9] = "hfT7jp2q";
+    char hash[23] = "v8XH/MrpaYdagdMgM4yKc.";
+    char magic[4] = "$1$";
     // compute alternate sum
+    char input[21];
+    strcpy(input, psswd);
+    strcat(input, salt);
+    strcat(input, psswd);
+    unsigned input_size = 21; // definitely 21 and not one more or less, unlike the others
+    char altsum_prealloc[16];
+    compute_primitive_md5(input, input_size, altsum_prealloc); // computes the altsum
     // compute intermediate sum
+    unsigned psswd_size = 6; // NOTE: COULD BE ONE MORE
+    unsigned magic_size = 3; // nOTE: COULD BE ONE MORE
+    unsigned salt_size = 8; // NOTE: ALSO COULD BE ONE MORE
+    unsigned altsum_size = 16; // I love hardcoded things (even if it will deterministically be 16 forever so I guess this is best practice)
+    char intermsum_prealloc[27];  // oNLY WORKS ON PASSWORD SIZES OF 16
+    compute_intermsum(psswd, psswd_size, magic, magic_size, salt, salt_size, altsum_prealloc, altsum_size, intermsum_prealloc);
     // remaining calculations to extend intermsum to interm_1000
+    char interm1000_sum_prealloc[27]; // I love hardcoded things
+    unsigned intermsum_size = 27;
+    interm_1000(psswd, psswd_size, salt, salt_size, intermsum_prealloc, intermsum_size, interm1000_sum_prealloc);
     // rearrange/hash the bytes of the interm_1000
+    char partitioned_stuff[23];
+    unsigned interm1000_size = 27; // for readibility :'>
+    rearrange(interm1000_sum_prealloc, interm1000_size, partitioned_stuff);
+    for (unsigned i = 0; i < 23; ++i) {
+        if (hash[i] == partitioned_stuff[i]) {
+            cout << "Alexxx " << "\n";
+        }
+        else {
+            cout << "boo: " << partitioned_stuff[i] << "\n";
+        }
+    }
     return 0;
 }
 
 
-string compute_primitive_md5(string input) {
-    unsigned char digest[16];   //allocate 16 bytes for result, or "digest"
-    char* to_hash = new char(input.length());   //allocate space for input 
-    strcpy(to_hash, input.c_str());   //copy input into to_hash
-    
-    MD5((unsigned char*)(to_hash), strlen(to_hash), (unsigned char*)(digest));    //compute the md5
-    return string((char*)&digest, 16);    // convert into a string
+// tell each thread where to start, which direction to go in, and how many passwords to skip
+void compute_primitive_md5(char* input, unsigned in_len, char* digest) {
+    // char digest[16];   //allocate 16 bytes for result, or "digest"
+    // char* to_hash;   //allocate space for input 
+    // strcpy(to_hash, input.c_str());   //copy input into to_hash
+    MD5((unsigned char*)(input), in_len, (unsigned char*)(digest));    //compute the md5 (which is also the altsum)
+    return;    // convert into a string
 }
-
-// compute alternate sum
-string compute_altsum(string salt, string passwd) {
-    return compute_primitive_md5(passwd.append(salt).append(passwd)); // maybe just not make this a function?
-}
-
 
 // compute intermediate sum (Intermediate_0)
-string compute_intermsum(string psswd, string magic, string salt, string altsum) {
-    //concatenate the inputs; altsum is repeated as necessaryi
-    // For each bit in length(password), from low to high and stopping after the most significant set bit such that
-    // if (!bit.set()) {
-    //  intermsum.append(a NUL byte)
+void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc) {
+    // concatenate the inputs; altsum is repeated as necessary
+    unsigned int wholes = (p_len / a_len);
+    unsigned int parts = (p_len % a_len);
+    unsigned int tmp_intermsum_len = 0;
+    char tmp_intermsum[27];
+    memcpy(tmp_intermsum, psswd, p_len);
+    tmp_intermsum_len += p_len;
+    memcpy(tmp_intermsum + tmp_intermsum_len, magic, m_len);
+    tmp_intermsum_len += m_len;
+    memcpy(tmp_intermsum + tmp_intermsum_len, salt, s_len);
+    tmp_intermsum_len += s_len;
     
-    //}
-    // else {
-    //      intermsum.append(first byte of the password)
-    
-    // }
+    for (unsigned int i = 0; i < wholes; ++i) {
+        memcpy(tmp_intermsum + tmp_intermsum_len, altsum, a_len);
+        tmp_intermsum_len += a_len;
+    }
+    memcpy(tmp_intermsum + tmp_intermsum_len, altsum, parts);
+    tmp_intermsum_len += parts;
 
-    return "intermsum";
+    // For each bit in length(password), from low to high and stopping after the most significant set bit such that
+    bitset<4> bin_tmp_intermsum(p_len);
+    for (unsigned int i = 0; i < 4 ; ++i) {
+        if (bin_tmp_intermsum[i] == 0) {
+            tmp_intermsum[tmp_intermsum_len] = '/0';
+            ++tmp_intermsum_len;
+        }
+        else { // if set
+            // tmp_intermsum.append(psswd.substr(0, 1));
+            memcpy(tmp_intermsum + tmp_intermsum_len, psswd, 1);
+            ++tmp_intermsum_len;
+            // intermsum_prealloc = tmp_intermsum;
+            memcpy(intermsum_prealloc, tmp_intermsum, tmp_intermsum_len);
+        }
+    }
+    return;
 }
 
 
 // remaining calculations (Intermediate_0 extended to Intermediate_1000)
-string interm_1000(string psswd, string salt, string intermsum) {
-    string working_final;
-    string tmp_intermsum = intermsum;
+void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* intermsum, unsigned i_len, char* interm1000_sum_prealloc) {
+    char working_final[i_len + p_len + p_len + s_len];
+    unsigned working_final_len = 0;
+    memcpy(interm1000_sum_prealloc, intermsum, i_len);
+    char tmptmptmp[16];
     for (unsigned i = 0; i < 1000; ++i) {
-        working_final = "";
+        working_final_len = 0;
         if (i % 2 == 0) { // if i is even intermsum_i
-            working_final.append(tmp_intermsum);
+            memcpy(working_final + working_final_len, interm1000_sum_prealloc, i_len);
+            working_final_len += i_len;
         }
         else { // else, concatenate password
-            working_final.append(psswd);
+            memcpy(working_final + working_final_len, psswd, p_len);
+            working_final_len += p_len;
         }
         if (i % 3 != 0) { // if not divisible by 3, salt
-            working_final.append(salt);
+            memcpy(working_final + working_final_len, salt, s_len);
+            working_final_len += s_len;
         }
         if (i % 7 != 0) { // if not divisible by 7, password
-            working_final.append(psswd);
+            memcpy(working_final + working_final_len, psswd, p_len);
+            working_final_len += p_len;
         }
         if (i % 2 == 0) { // if i is even, psswd
-            working_final.append(psswd);
+            memcpy(working_final + working_final_len, psswd, p_len);
+            working_final_len += p_len;
         }
         else { // if i is odd, intermsum_i
-            working_final.append(tmp_intermsum);
+            memcpy(working_final + working_final_len, interm1000_sum_prealloc, i_len);
+            working_final_len += i_len;
         }
-        //tmp_intermsum = md5(working_final);
+        compute_primitive_md5(working_final, working_final_len, tmptmptmp);
+        memcpy(interm1000_sum_prealloc, tmptmptmp, 16);
     }
-    return tmp_intermsum; // actually the final thing
+    return;
 }
 
-// TODO: should template this so we can do both 6 bits and 2 bits
-string gimme_char(bitset<6> bit_grp) { // 22 groups total
+
+char gimme_char(bitset<128> bit_grp) { // 22 groups total
     int to_int = static_cast<int>(bit_grp.to_ulong());
     string crypt_str = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    return crypt_str.substr(to_int, 1);
+    return crypt_str[to_int];
 }
 
-string md5_crypthash(string psswd, string salt, string magic, string finalsum) {
+
+void rearrange(char * finalsum, unsigned sum_len, char* partitioned_stuff) {
     // output magic, then salt, then '$' to separate salt from encrypted section
-    string tmp = magic.append(salt).append("$");
     // then convert string to binary
-    bitset<128> much_binary (finalsum.c_str());
     // reordering shenanigans (11 4 10 5 3 9 15 2 8 14 1 7 13 0 6 12)
     int byte_seq[16] = {11, 4, 10, 5, 3, 9, 15, 2, 8, 14, 1, 7, 13, 0, 6, 12}; // totally not arbitrary
-    bitset<128> new_WORLD_order; 
-    for (unsigned i = 0; i < 16; ++i) { // find the bytes of totally not arbitrary order in the not arbitrary order
-        // reorder stoof
-        unsigned ith_start = byte_seq[i] * 8;
-        unsigned ith_end = ith_start + 7;
-        unsigned jth_start = i * 8;
-        unsigned jth_end = jth_start + 7; // index of bits
-        // identifying the bits in the byte in question
-        for (unsigned j = jth_start; j <= jth_end; ++j) {
-            new_WORLD_order[j] = much_binary[j];
-        }
+    char new_order[sum_len];
+    for(unsigned i = 0; i < sum_len; ++i) {
+        new_order[i] = finalsum[byte_seq[i]];
     }
     // partition into groups of 6 bits (22 groups total)
     //beginning with the least significant (rightmost)
     //NOTE: the link says no additional padding, but we're electing to ignore that
-    string partitioned_stuff;
-    for (unsigned i = 127; i >= 0; i = i - 6) {
-        if (i > 128) { // to catch the BIG number :^)
-            break; // TODO still need to convert the two most significant bits
-        }
-        bitset<6> tmp_bits;
-        for (unsigned j = 5; j >= 0; --j) {
-            if (j > 5) { // another BIG one :^')
-                break;
-            }
-            tmp[5 - j] = new_WORLD_order[i - j];
-        }
-        // convert to char base64
-        partitioned_stuff = partitioned_stuff.append(gimme_char(tmp_bits));
+    bitset<128> new_order_bin(new_order, 128);
+    bitset<128> to_char(new_order_bin &= 0x3); // syntax requires &= ..?
+    new_order_bin >>= 2;
+    partitioned_stuff[0] = gimme_char(to_char);
+    for (unsigned i = 1; i < 22; ++i) {
+        to_char = bitset<128>(new_order_bin &= 0x3F); // syntax requires &= ..?
+        partitioned_stuff[i] = gimme_char(to_char);
+        new_order_bin >>= 6;
     }
-    // output corresponding base64 character with said grop of 6 bits
-    
-    return tmp.append(partitioned_stuff);
+    partitioned_stuff[22] = '\0';
+    return;
 }
 
