@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iomanip>
 
+
 using namespace std;
 
 void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
@@ -25,8 +26,8 @@ void print_char_reg(char* to_print, unsigned len) {
     cout << endl;
 }
 
-int main(int argc, char** argv) {
-    char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
+bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwords
+    // char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
     char salt[9] = "hfT7jp2q";
     char hash[23] = "v8XH/MrpaYdagdMgM4yKc.";
     char magic[4] = "$1$";
@@ -64,16 +65,54 @@ int main(int argc, char** argv) {
     char partitioned_stuff[23];
     unsigned interm1000_size = 16; // for readibility :'>
     rearrange(interm1000_sum_prealloc, interm1000_size, partitioned_stuff);
-    for (unsigned i = 0; i < 23; ++i) {
-        cout << partitioned_stuff[i];
-        if (hash[i] == partitioned_stuff[i]) {
-            // cout << "Alexxxxxx: " << partitioned_stuff[i];
-        }
-        else {
-            // cout << "boo: " << partitioned_stuff[i] << "\n";
-        }
+
+    if(strncmp(partitioned_stuff, hash, 22) == 0) {
+        return true;
     }
-    cout << endl;
+    return false;
+    // for (unsigned i = 0; i < 23; ++i) {
+    //     cout << partitioned_stuff[i];
+    //     if (hash[i] == partitioned_stuff[i]) {
+    //         // cout << "Alexxxxxx: " << partitioned_stuff[i];
+    //     }
+    //     else {
+    //         // cout << "boo: " << partitioned_stuff[i] << "\n";
+    //     }
+    // }
+    // cout << endl;
+}
+
+bool get_next_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
+
+}
+
+bool get_prev_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
+
+}
+
+int main(int argc, char** argv) { // TODO: 
+    char* start = argv[1];
+    char direction = argv[2][0];
+    unsigned num_to_skip = static_cast<unsigned>(argv[3][0]);
+
+    if(direction == 'l') {
+        do {
+            if(check_pass(start)) {
+                printf("HIT: %s", start);
+            }
+        } while (get_prev_pass(start, num_to_skip));
+    } else if(direction == 'r') {
+        do {
+            if(check_pass(start)) {
+                printf("HIT: %s", start);
+            }
+        } while (get_next_pass(start, num_to_skip));
+    } else {
+
+    }
+
+    // char pass[7] = "bbcdef";
+    // cout << check_pass(pass) << endl;
     return 0;
 }
 
