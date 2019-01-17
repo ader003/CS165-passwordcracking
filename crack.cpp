@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iomanip>
 #include <thread>
+#include <ctime>
 using namespace std;
 
 void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
@@ -36,7 +37,6 @@ void print_char_reg(char* to_print, unsigned len) {
 
 
 bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwords
-    // char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
     char salt[9] = "hfT7jp2q";
     char hash[23] = "v8XH/MrpaYdagdMgM4yKc."; //THIS IS THE REAL HASH
     // char hash[23] = "Kx3u7/FpY8TZv0y2tgyGC1";
@@ -46,12 +46,10 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     strcpy(input, psswd);
     strcat(input, salt);
     strcat(input, psswd);
-    // print_char_reg(input, 21);
     
     unsigned input_size = 20; // definitely not including the null character at the end
     char altsum_prealloc[16];
     compute_primitive_md5(input, input_size, altsum_prealloc); // computes the altsum
-    // print_char_hex(altsum_prealloc, 16);
 
     // compute intermediate sum
     unsigned psswd_size = 6; 
@@ -60,13 +58,11 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     unsigned altsum_size = 16; 
     char intermsum_prealloc[16];  // oNLY WORKS ON PASSWORD SIZES OF 16
     compute_intermsum(psswd, psswd_size, magic, magic_size, salt, salt_size, altsum_prealloc, altsum_size, intermsum_prealloc);
-    // print_char_hex(intermsum_prealloc, 16);
 
     // remaining calculations to extend intermsum to interm_1000
     char interm1000_sum_prealloc[16];
     unsigned intermsum_size = 16;
     interm_1000(psswd, psswd_size, salt, salt_size, intermsum_prealloc, intermsum_size, interm1000_sum_prealloc);
-    // print_char_hex(interm1000_sum_prealloc, 16);
 
     // rearrange/hash the bytes of the interm_1000
     char partitioned_stuff[23];
@@ -125,38 +121,55 @@ void check_block(char* start, char* end, bool direction) { // THREAD THIS
 int main(int argc, char** argv) { // TODO: 
     // char test[7] = "xyzabc";
     // char end_test[7] = "zccdef";
+    
+    char begin_1[7] = "zzzzzz"; // TESTING BEGIN
+    char end_1[7] = "zzzaaa";
+    char begin_2[7] = "zzyzzz";
+    char end_2[7] = "zzyaaa";
+    char begin_3[7] = "zzxzzz";
+    char end_3[7] = "zzxaaa";
+    char begin_4[7] = "zzwzzz";
+    char end_4[7] = "zzwaaa";
+    char begin_5[7] = "zzvzzz";
+    char end_5[7] = "zzvaaa";
+    char begin_6[7] = "zzuzzz";
+    char end_6[7] = "zzuaaa";
+    char begin_7[7] = "zztzzz";
+    char end_7[7] = "zztaaa";
+    char begin_8[7] = "zzszzz";
+    char end_8[7] = "zzsaaa";
+    char begin_9[7] = "zzrzzz";
+    char end_9[7] = "zzraaa";
+    
+    double duration;
+    time_t start;
+    
+    start = clock();
+    thread t1(check_block, begin_1, end_1, 0);
+    // thread t2(check_block, begin_2, end_2, 0);
+    // thread t3(check_block, begin_3, end_3, 0);
+    // thread t4(check_block, begin_4, end_4, 0);
+    // thread t5(check_block, begin_5, end_5, 0);
+    // thread t6(check_block, begin_6, end_6, 0);
+    // thread t7(check_block, begin_7, end_7, 0);
+    // thread t8(check_block, begin_8, end_8, 0);
+    // thread t9(check_block, begin_9, end_9, 0);
+    t1.join();
+    // t2.join();
+    // t3.join();
+    // t4.join();
+    // t5.join();
+    // t6.join();
+    // t7.join();
+    // t8.join();
+    // t9.join();
+    duration = (clock() - start ) / (double) CLOCKS_PER_SEC;
+    cout << "time: " << duration << ": " << (double)(26*26*26 / duration) << " passwords per sec" << endl;
 
-    void (*ptr1)(*char, *char, bool) = check_block;
 
-    thread t1(*ptr)
-    // cout << check_pass(test) << endl;
 
-    // do { // GOOD STUFF BEGIN
-    //     printf("%s\n", test);
-    // } while (get_next_pass(test, end_test, true));
-    // printf("%s\n", test); // GOOD STUFF END
+    cout << "DONE" << endl; // TESTING END
 
-    // char* start = argv[1];
-    // char direction = argv[2][0];
-    // unsigned num_to_skip = static_cast<unsigned>(argv[3][0]);
-
-    // if(direction == 'l') {
-    //     do {
-    //         if(check_pass(start)) {
-    //             printf("HIT: %s", start);
-    //         }
-    //     } while (get_prev_pass(start, num_to_skip));
-    // } else if(direction == 'r') {
-    //     do {
-    //         if(check_pass(start)) {
-    //             printf("HIT: %s", start);
-    //         }
-    //     } while (get_next_pass(start, num_to_skip));
-    // } else {
-
-    // }
-    // char pass[7] = "bbcdef";
-    // cout << check_pass(pass) << endl;
     return 0;
 }
 
