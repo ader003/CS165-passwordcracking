@@ -87,7 +87,7 @@ doHash() {
 
     salt=${salt#'$1$'}
     salt=${salt:0:32} # 8 first bytes
-
+    
     intermediate=$(
     {
         # Start intermediate result
@@ -95,7 +95,7 @@ doHash() {
 
         # compute a separate md5 sum
         alternate=$(printf "$password$salt$password" | md5hex) 
-
+        
         # Add one byte from alternate for each character in the password. Wtf?
         while printf "$alternate" 2> /dev/null
         do
@@ -108,7 +108,7 @@ doHash() {
         do
             if (( i & 1 ))
             then
-                printf '\x00' 
+                printf '\x00'
             else 
                 printf "$password" | head -c 1
             fi
