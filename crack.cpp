@@ -1,18 +1,22 @@
 #include <openssl/md5.h>
 #include <cstdlib>
 #include <bitset>
-#include <cstring>
-#include <string>
+// #include <cstring>
+// #include <string>
 #include <iostream>
 #include <iomanip>
-
-
 using namespace std;
 
 void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
 void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* intermsum, unsigned i_len, char* interm1000_sum_prealloc); // extends to intermsum to intermediate_1000 sum
 void rearrange(char* finalsum, unsigned sum_len, char* partitioned_stuff);
 void compute_primitive_md5(char* input, unsigned in_len, char* altsum_prealloc); //return the "primitive" md5 hash of a string
+void print_char_hex(char* to_print, unsigned len);
+void print_char_reg(char* to_print, unsigned len);
+bool check_pass(char* psswd);
+bool get_next_pass(char* pass, unsigned num_to_skip);
+bool get_prev_pass(char* pass, unsigned num_to_skip);
+
 
 void print_char_hex(char* to_print, unsigned len) {
     for(unsigned i = 0; i < len; ++i)
@@ -20,11 +24,13 @@ void print_char_hex(char* to_print, unsigned len) {
     cout << dec << endl;
 }
 
+
 void print_char_reg(char* to_print, unsigned len) {
     for(unsigned i = 0; i < len; ++i)
         cout << (to_print[i]) << " ";
     cout << endl;
 }
+
 
 bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwords
     // char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
@@ -41,7 +47,6 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     unsigned input_size = 20; // definitely not including the null character at the end
     char altsum_prealloc[16];
     compute_primitive_md5(input, input_size, altsum_prealloc); // computes the altsum
-
     // print_char_hex(altsum_prealloc, 16);
 
     // compute intermediate sum
@@ -51,7 +56,6 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     unsigned altsum_size = 16; // I love hardcoded things (even if it will deterministically be 16 forever so I guess this is best practice)
     char intermsum_prealloc[16];  // oNLY WORKS ON PASSWORD SIZES OF 16
     compute_intermsum(psswd, psswd_size, magic, magic_size, salt, salt_size, altsum_prealloc, altsum_size, intermsum_prealloc);
-
     // print_char_hex(intermsum_prealloc, 16);
 
     // // remaining calculations to extend intermsum to interm_1000
@@ -70,25 +74,20 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
         return true;
     }
     return false;
-    // for (unsigned i = 0; i < 23; ++i) {
-    //     cout << partitioned_stuff[i];
-    //     if (hash[i] == partitioned_stuff[i]) {
-    //         // cout << "Alexxxxxx: " << partitioned_stuff[i];
-    //     }
-    //     else {
-    //         // cout << "boo: " << partitioned_stuff[i] << "\n";
-    //     }
-    // }
-    // cout << endl;
 }
+
 
 bool get_next_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
-
+    bool smthn = false;
+    return smthn;
 }
+
 
 bool get_prev_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
-
+    bool smthn = false;
+    return smthn;
 }
+
 
 int main(int argc, char** argv) { // TODO: 
     char* start = argv[1];
@@ -116,19 +115,16 @@ int main(int argc, char** argv) { // TODO:
     return 0;
 }
 
-
 // tell each thread where to start, which direction to go in, and how many passwords to skip
 void compute_primitive_md5(char* input, unsigned in_len, char* digest) {
     // char digest[16];   //allocate 16 bytes for result, or "digest"
-    // char* to_hash;   //allocate space for input 
-    // strcpy(to_hash, input.c_str());   //copy input into to_hash
     MD5_CTX* context = new MD5_CTX();
     MD5_Init(context);
     MD5_Update(context, (unsigned char*)(input), in_len);
     MD5_Final((unsigned char*)(digest), context);
     // delete context;
     // MD5((unsigned char*)(input), in_len, (unsigned char*)(digest));    //compute the md5 (which is also the altsum)
-    return;    // convert into a string
+    return;
 }
 
 // compute intermediate sum (Intermediate_0)
@@ -228,8 +224,7 @@ char gimme_char(bitset<128> bit_grp) { // 22 groups total
 
 void rearrange(char * finalsum, unsigned sum_len, char* partitioned_stuff) {
     // output magic, then salt, then '$' to separate salt from encrypted section
-    // then convert string to binary
-    // reordering shenanigans (11 4 10 5 3 9 15 2 8 14 1 7 13 0 6 12)
+    // reordering shenanigans
     // int byte_seq[16] = {11, 4, 10, 5, 3, 9, 15, 2, 8, 14, 1, 7, 13, 0, 6, 12};
     int byte_seq[16] = {12, 6, 0, 13, 7, 1, 14, 8, 2, 15, 9, 3, 5, 10, 4, 11}; // totally not arbitrary
     char *new_order = new char[sum_len];
@@ -239,9 +234,7 @@ void rearrange(char * finalsum, unsigned sum_len, char* partitioned_stuff) {
     // partition into groups of 6 bits (22 groups total)
     // beginning with the least significant (rightmost)
     // NOTE: the link says no additional padding, but we're electing to ignore that
-
     // new_order_bin >>= 2;
-
     for(unsigned i = 0; i < 20; i += 4) {
         partitioned_stuff[i] = gimme_char(new_order[0] & 0x3f);
         partitioned_stuff[i+1] = gimme_char(((new_order[0] & 0xc0) >> 6) | ((new_order[1] & 0xf) << 2));
@@ -249,10 +242,8 @@ void rearrange(char * finalsum, unsigned sum_len, char* partitioned_stuff) {
         partitioned_stuff[i+3] = gimme_char((new_order[2] & 0xfc) >> 2);
         new_order = new_order + 3;
     }
-
     partitioned_stuff[21] = gimme_char((new_order[0] & 0xc0) >> 6);
     partitioned_stuff[20] = gimme_char((new_order[0] & 0x3f));
-
     partitioned_stuff[22] = '\0';
     return;
 }
