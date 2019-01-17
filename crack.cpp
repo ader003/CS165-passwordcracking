@@ -1,10 +1,10 @@
 #include <openssl/md5.h>
 #include <cstdlib>
 #include <bitset>
-// #include <cstring>
-// #include <string>
 #include <iostream>
+#include <cstring>
 #include <iomanip>
+#include <thread>
 using namespace std;
 
 void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
@@ -14,8 +14,11 @@ void compute_primitive_md5(char* input, unsigned in_len, char* altsum_prealloc);
 void print_char_hex(char* to_print, unsigned len);
 void print_char_reg(char* to_print, unsigned len);
 bool check_pass(char* psswd);
-bool get_next_pass(char* pass, unsigned num_to_skip);
-bool get_prev_pass(char* pass, unsigned num_to_skip);
+bool get_next_pass(char* pass, char start_at, bool direction);
+void check_block(char* start, char* end, bool direction);
+// List<char> god_list = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+// Map<char, > god_map = {{'a', 'a'}, {'b', 'b'}, {'c', 'c'}, {'d', 'd'}, {'e', 'e'}, {'f', 'f'}, {'g', 'g'}, {'h', 'h'}, {'i', 'i'}, {'j', 'j'}, {'k', 'k'}, {'l', 'l'}, {'m', 'm'}, 
+// {'n', 'n'}, {'o', 'o'}, {'p', 'p'}, {'q', 'q'}, {'r', 'r'}, {'s', 's'}, {'t', 't'}, {'u', 'u'}, {'v', 'v'}, {'w', 'w'}, {'x', 'x'}, {'y', 'y'}, {'z', 'z'}}
 
 
 void print_char_hex(char* to_print, unsigned len) {
@@ -35,7 +38,8 @@ void print_char_reg(char* to_print, unsigned len) {
 bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwords
     // char psswd[7] = "bbcdef"; // null terminated (all-ish of them)
     char salt[9] = "hfT7jp2q";
-    char hash[23] = "v8XH/MrpaYdagdMgM4yKc.";
+    char hash[23] = "v8XH/MrpaYdagdMgM4yKc."; //THIS IS THE REAL HASH
+    // char hash[23] = "Kx3u7/FpY8TZv0y2tgyGC1";
     char magic[4] = "$1$";
     // compute alternate sum
     char input[21];
@@ -50,24 +54,23 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     // print_char_hex(altsum_prealloc, 16);
 
     // compute intermediate sum
-    unsigned psswd_size = 6; // NOTE: COULD BE ONE MORE
-    unsigned magic_size = 3; // NOTE: COULD BE ONE MORE
-    unsigned salt_size = 8; // NOTE: ALSO COULD BE ONE MORE
-    unsigned altsum_size = 16; // I love hardcoded things (even if it will deterministically be 16 forever so I guess this is best practice)
+    unsigned psswd_size = 6; 
+    unsigned magic_size = 3; 
+    unsigned salt_size = 8; 
+    unsigned altsum_size = 16; 
     char intermsum_prealloc[16];  // oNLY WORKS ON PASSWORD SIZES OF 16
     compute_intermsum(psswd, psswd_size, magic, magic_size, salt, salt_size, altsum_prealloc, altsum_size, intermsum_prealloc);
     // print_char_hex(intermsum_prealloc, 16);
 
-    // // remaining calculations to extend intermsum to interm_1000
-    char interm1000_sum_prealloc[16]; // I love hardcoded things
+    // remaining calculations to extend intermsum to interm_1000
+    char interm1000_sum_prealloc[16];
     unsigned intermsum_size = 16;
     interm_1000(psswd, psswd_size, salt, salt_size, intermsum_prealloc, intermsum_size, interm1000_sum_prealloc);
-
     // print_char_hex(interm1000_sum_prealloc, 16);
 
-    /// // rearrange/hash the bytes of the interm_1000
+    // rearrange/hash the bytes of the interm_1000
     char partitioned_stuff[23];
-    unsigned interm1000_size = 16; // for readibility :'>
+    unsigned interm1000_size = 16;
     rearrange(interm1000_sum_prealloc, interm1000_size, partitioned_stuff);
 
     if(strncmp(partitioned_stuff, hash, 22) == 0) {
@@ -76,40 +79,82 @@ bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwor
     return false;
 }
 
-
-bool get_next_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
-    bool smthn = false;
-    return smthn;
+// "direction = true" means towqard z
+bool get_next_pass(char* pass, char * end_at, bool direction) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
+    for (unsigned i = 5; i >= 0 & i < 6; --i) {
+        if(direction) {
+            if (pass[i] + 1 == '{') {
+                pass[i] = 'a';
+            } else{
+                pass[i]++;
+                break; 
+            }
+        } else {
+            if(pass[i] - 1 == '`') {
+                pass[i] = 'z';
+            } else {
+                pass[i]--;
+                break;
+            }
+        } 
+    }
+    // do i call again?
+    //compare pass to end at
+    if (memcmp(pass, end_at, 6) == 0) {
+        return false;
+    }
+    return true;
 }
 
-
-bool get_prev_pass(char* pass, unsigned num_to_skip) { // return true if pass contains a valid password when returning i.e. when no more passwords to compute, returns false
-    bool smthn = false;
-    return smthn;
+// "direction = true" means towqrds z
+void check_block(char* start, char* end, bool direction) { // THREAD THIS
+    cout << "Thread made?" << endl;
+    do{
+        if(check_pass(start)) {
+            printf("YOU FOUND IT: %s\n", start);
+            exit(0);
+        }
+    } while (get_next_pass(start, end, direction));
+        if(check_pass(start)) {
+        printf("YOU FOUND IT: %s\n", start);
+        exit(0);
+    }
 }
 
 
 int main(int argc, char** argv) { // TODO: 
-    char* start = argv[1];
-    char direction = argv[2][0];
-    unsigned num_to_skip = static_cast<unsigned>(argv[3][0]);
+    // char test[7] = "xyzabc";
+    // char end_test[7] = "zccdef";
 
-    if(direction == 'l') {
-        do {
-            if(check_pass(start)) {
-                printf("HIT: %s", start);
-            }
-        } while (get_prev_pass(start, num_to_skip));
-    } else if(direction == 'r') {
-        do {
-            if(check_pass(start)) {
-                printf("HIT: %s", start);
-            }
-        } while (get_next_pass(start, num_to_skip));
-    } else {
+    void (*ptr1)(*char, *char, bool) = check_block;
 
-    }
+    thread t1(*ptr)
+    // cout << check_pass(test) << endl;
 
+    // do { // GOOD STUFF BEGIN
+    //     printf("%s\n", test);
+    // } while (get_next_pass(test, end_test, true));
+    // printf("%s\n", test); // GOOD STUFF END
+
+    // char* start = argv[1];
+    // char direction = argv[2][0];
+    // unsigned num_to_skip = static_cast<unsigned>(argv[3][0]);
+
+    // if(direction == 'l') {
+    //     do {
+    //         if(check_pass(start)) {
+    //             printf("HIT: %s", start);
+    //         }
+    //     } while (get_prev_pass(start, num_to_skip));
+    // } else if(direction == 'r') {
+    //     do {
+    //         if(check_pass(start)) {
+    //             printf("HIT: %s", start);
+    //         }
+    //     } while (get_next_pass(start, num_to_skip));
+    // } else {
+
+    // }
     // char pass[7] = "bbcdef";
     // cout << check_pass(pass) << endl;
     return 0;
@@ -159,7 +204,6 @@ void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len,
             ++tmp_intermsum_len;
         }
         else { // if set
-            // tmp_intermsum.append(psswd.substr(0, 1));
             tmp_intermsum[tmp_intermsum_len] = '\0';
             ++tmp_intermsum_len;
             // intermsum_prealloc = tmp_intermsum;
@@ -183,7 +227,7 @@ void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* 
 
     for (unsigned i = 0; i < 1000; ++i) {
         working_final_len = 0;
-        if (i % 2 == 0) { // if i is even intermsum_i
+        if ((i & 0x1) == 0) { // if i is even intermsum_i
             memcpy(working_final + working_final_len, interm1000_sum_prealloc, i_len);
             working_final_len += i_len;
         }
@@ -199,7 +243,7 @@ void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* 
             memcpy(working_final + working_final_len, psswd, p_len);
             working_final_len += p_len;
         }
-        if (i % 2 == 0) { // if i is even, psswd
+        if ((i & 0x1) == 0) { // if i is even, psswd
             memcpy(working_final + working_final_len, psswd, p_len);
             working_final_len += p_len;
         }
