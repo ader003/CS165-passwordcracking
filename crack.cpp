@@ -39,7 +39,7 @@ void print_char_reg(char* to_print, unsigned len) {
 bool check_pass(char* psswd) { // NOTE: Will only check correctly 6 char passwords
     char salt[9] = "hfT7jp2q";
     char hash[23] = "v8XH/MrpaYdagdMgM4yKc."; //THIS IS THE REAL HASH
-    // char hash[23] = "Kx3u7/FpY8TZv0y2tgyGC1";
+    //char hash[23] =    "O53e58A82lSBz1tJeJRfY/";
     char magic[4] = "$1$";
     // compute alternate sum
     char input[21];
@@ -143,7 +143,7 @@ int main(int argc, char** argv) { // TODO:
     
     double duration;
     time_t start;
-    
+
     start = clock();
     thread t1(check_block, begin_1, end_1, 0);
     // thread t2(check_block, begin_2, end_2, 0);
@@ -180,7 +180,7 @@ void compute_primitive_md5(char* input, unsigned in_len, char* digest) {
     MD5_Init(context);
     MD5_Update(context, (unsigned char*)(input), in_len);
     MD5_Final((unsigned char*)(digest), context);
-    // delete context;
+    delete context;
     // MD5((unsigned char*)(input), in_len, (unsigned char*)(digest));    //compute the md5 (which is also the altsum)
     return;
 }
@@ -248,11 +248,12 @@ void interm_1000(char* psswd, unsigned p_len, char* salt, unsigned s_len, char* 
             memcpy(working_final + working_final_len, psswd, p_len);
             working_final_len += p_len;
         }
-        if (i % 3 != 0) { // if not divisible by 3, salt
+        if ((i >= 3 ? i % 3 : i) != 0) { // if not divisible by 3, salt
             memcpy(working_final + working_final_len, salt, s_len);
             working_final_len += s_len;
         }
-        if (i % 7 != 0) { // if not divisible by 7, password
+        //if (i % 7 != 0) { // if not divisible by 7, password
+        if((i >= 7 ? i % 7 : i) != 0) { // FASSSSSTTTTTT
             memcpy(working_final + working_final_len, psswd, p_len);
             working_final_len += p_len;
         }
@@ -297,11 +298,13 @@ void rearrange(char * finalsum, unsigned sum_len, char* partitioned_stuff) {
         partitioned_stuff[i+1] = gimme_char(((new_order[0] & 0xc0) >> 6) | ((new_order[1] & 0xf) << 2));
         partitioned_stuff[i+2] = gimme_char(((new_order[1] & 0xf0) >> 4) | ((new_order[2] & 0x3) << 4));
         partitioned_stuff[i+3] = gimme_char((new_order[2] & 0xfc) >> 2);
-        new_order = new_order + 3;
+        new_order += 3;
     }
     partitioned_stuff[21] = gimme_char((new_order[0] & 0xc0) >> 6);
     partitioned_stuff[20] = gimme_char((new_order[0] & 0x3f));
     partitioned_stuff[22] = '\0';
+    new_order -= 15;
+    delete [] new_order;
     return;
 }
 
