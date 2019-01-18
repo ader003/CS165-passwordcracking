@@ -11,6 +11,9 @@
         "memory": "cpp",
         "system_error": "cpp",
         "type_traits": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "__bit_reference": "cpp",
+        "ios": "cpp",
+        "thread": "cpp"
     }
 }

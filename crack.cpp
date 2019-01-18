@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <thread>
 #include <ctime>
+#include <cmath>
 using namespace std;
 
 void compute_intermsum(char* psswd, unsigned p_len, char* magic, unsigned m_len, char* salt, unsigned s_len, char* altsum, unsigned a_len, char* intermsum_prealloc); // intermediate_0 sum
@@ -104,7 +105,7 @@ bool get_next_pass(char* pass, char * end_at, bool direction) { // return true i
 
 // "direction = true" means towqrds z
 void check_block(char* start, char* end, bool direction) { // THREAD THIS
-    cout << "Thread made?" << endl;
+    // cout << "Thread made?" << endl;
     do{
         if(check_pass(start)) {
             printf("YOU FOUND IT: %s\n", start);
@@ -121,31 +122,81 @@ void check_block(char* start, char* end, bool direction) { // THREAD THIS
 int main(int argc, char** argv) { // TODO: 
     // char test[7] = "xyzabc";
     // char end_test[7] = "zccdef";
-    
-    char begin_1[7] = "zzzzzz"; // TESTING BEGIN
-    char end_1[7] = "zzzaaa";
-    char begin_2[7] = "zzyzzz";
-    char end_2[7] = "zzyaaa";
-    char begin_3[7] = "zzxzzz";
-    char end_3[7] = "zzxaaa";
-    char begin_4[7] = "zzwzzz";
-    char end_4[7] = "zzwaaa";
-    char begin_5[7] = "zzvzzz";
-    char end_5[7] = "zzvaaa";
-    char begin_6[7] = "zzuzzz";
-    char end_6[7] = "zzuaaa";
-    char begin_7[7] = "zztzzz";
-    char end_7[7] = "zztaaa";
-    char begin_8[7] = "zzszzz";
-    char end_8[7] = "zzsaaa";
-    char begin_9[7] = "zzrzzz";
-    char end_9[7] = "zzraaa";
-    
-    double duration;
-    time_t start;
 
-    start = clock();
-    thread t1(check_block, begin_1, end_1, 0);
+    char begin[32][7];
+    char end[32][7];
+    memcpy(begin[0], "aaaaaa", 7);
+    memcpy(end[31], "zzzzzz", 7);
+    
+    unsigned long bot_half_psswds = pow(26,6) / 2;
+    unsigned t_work_bot = bot_half_psswds / 14; // num passwords for each thread in bot half
+    unsigned long top_quart_psswds = bot_half_psswds / 2;
+    unsigned t_work_top = top_quart_psswds / 9; // num passwords for each thread in either top quarter
+
+    unsigned long temp = 0;
+    unsigned long temp_start = 0;
+
+    // password thread range generation
+    for (unsigned i = 0; i < 31; ++i) {
+        if (i <= 14) {
+            temp_start += t_work_bot;
+            temp = temp_start;
+            for(unsigned j = 5; j <= 5; --j) {
+                end[i][j] = (temp % 26) + 97;
+                begin[i+1][j] = end[i][j];
+                temp /= 26;
+            }
+        } else if (i <= 23) {
+            temp_start += t_work_top;
+            temp = temp_start;
+            for(unsigned j = 5; j <= 5; --j) {
+                end[i][j] = (temp % 26) + 97;
+                begin[i+1][j] = end[i][j];
+                temp /= 26;
+            }
+        } else {
+            temp_start += t_work_top;
+            temp = temp_start;
+            for(unsigned j = 5; j <= 5; --j) {
+                end[i][j] = (temp % 26) + 97;
+                begin[i+1][j] = end[i][j];
+                temp /= 26;
+            }
+        }
+        end[i][6] = '\0';
+        begin[i+1][6] = '\0';
+        get_next_pass(begin[i+1], end[31], 1);
+    }
+//  cout << "FINISHED INITIALIZING" << endl;
+    // top range temp variables
+// for (unsigned i = 0; i < 32; ++i) {
+//     printf("%d: begin: %s : end: %s\n", i, begin[i], end[i]);
+// }
+    
+    // char begin_1[7] = "zzzzzz"; // TESTING BEGIN
+    // char end_1[7] = "zzzaaa";
+    // char begin_2[7] = "zzyzzz";
+    // char end_2[7] = "zzyaaa";
+    // char begin_3[7] = "zzxzzz";
+    // char end_3[7] = "zzxaaa";
+    // char begin_4[7] = "zzwzzz";
+    // char end_4[7] = "zzwaaa";
+    // char begin_5[7] = "zzvzzz";
+    // char end_5[7] = "zzvaaa";
+    // char begin_6[7] = "zzuzzz";
+    // char end_6[7] = "zzuaaa";
+    // char begin_7[7] = "zztzzz";
+    // char end_7[7] = "zztaaa";
+    // char begin_8[7] = "zzszzz";
+    // char end_8[7] = "zzsaaa";
+    // char begin_9[7] = "zzrzzz";
+    // char end_9[7] = "zzraaa";
+    
+    // double duration;
+    // time_t start;
+
+    // start = clock();
+    // thread t1(check_block, begin_1, end_1, 0);
     // thread t2(check_block, begin_2, end_2, 0);
     // thread t3(check_block, begin_3, end_3, 0);
     // thread t4(check_block, begin_4, end_4, 0);
@@ -154,7 +205,7 @@ int main(int argc, char** argv) { // TODO:
     // thread t7(check_block, begin_7, end_7, 0);
     // thread t8(check_block, begin_8, end_8, 0);
     // thread t9(check_block, begin_9, end_9, 0);
-    t1.join();
+    // t1.join();
     // t2.join();
     // t3.join();
     // t4.join();
@@ -163,12 +214,22 @@ int main(int argc, char** argv) { // TODO:
     // t7.join();
     // t8.join();
     // t9.join();
-    duration = (clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << "time: " << duration << ": " << (double)(26*26*26 / duration) << " passwords per sec" << endl;
+    // duration = (clock() - start ) / (double) (CLOCKS_PER_SEC);
+    
+    // cout << "time: " << duration << ": " << (double)(26*26*26 / duration) << " passwords per sec" << endl;
+
+    thread t_list[32];
+
+    for(unsigned i = 0; i < 32; ++i) {
+        t_list[i] = thread(check_block, begin[i], end[i], 1);
+    }
+
+    for(unsigned i = 0; i < 32; ++i) {
+        t_list[i].join();
+    }
 
 
-
-    cout << "DONE" << endl; // TESTING END
+    // cout << "DONE" << endl; // TESTING END
 
     return 0;
 }
